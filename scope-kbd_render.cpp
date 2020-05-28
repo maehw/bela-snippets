@@ -62,45 +62,32 @@ bool setup(BelaContext *context, void *userData)
 	return true;
 }
 
-float lastOut = 0.0;
-float lastOut2 = 0.0;
-
 void render(BelaContext *context, void *userData)
 {
-	static float out4 = 0;
+	static float out2 = 0;
+
 	// iterate over the audio frames and create three oscillators, seperated in phase by PI/2
 	for (unsigned int n = 0; n < context->audioFrames; ++n)
 	{
 		float out = 0.8f * sinf(gPhase);
-		float out2 = 0.8f * sinf(gPhase - (float)M_PI/2.f);
 
 		gPhase += 2.0f * (float)M_PI * gFrequency * gInverseSampleRate;
 		if(gPhase > M_PI)
 			gPhase -= 2.0f * (float)M_PI;
 			
 		// log the three oscillators to the scope
-		scope.log(out, out4);
-        
-		// optional - tell the scope to trigger when oscillator 1 becomes less than oscillator 2
-		// note this has no effect unless trigger mode is set to custom in the scope UI
-		if (lastOut >= lastOut2 && out < out2)
-		{
-			scope.trigger();
-		}
-
-		lastOut = out;
-		lastOut2 = out2;
+		scope.log(out, out2);
 	}
 	
 	if(newKeyEvent)
 	{
 		if(keyType == 0)
 		{
-			out4 = 0.0f;
+			out2 = 0.0f;
 		}
 		else if(keyType == 1)
 		{
-			out4 = 0.8f;
+			out2 = 0.8f;
 		}
 		newKeyEvent = false;
 	}
