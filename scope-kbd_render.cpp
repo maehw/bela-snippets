@@ -118,7 +118,7 @@ void read_kbd(void*)
 		return;
 	}
 	
-	for(;;)
+	while( Bela_stopRequested() != 0 )
 	{
 		n = read(gKeyboardFd, &ev, sizeof ev);
 		if (sizeof ev == n)
