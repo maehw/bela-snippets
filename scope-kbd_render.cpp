@@ -113,8 +113,10 @@ void cleanup(BelaContext *context, void *userData)
 
 void read_kbd(void*)
 {
-    ssize_t n;
+    ssize_t num_read;
     struct input_event ev;
+    struct timeval tv;
+    fd_set readfds;
     const char *dev = "/dev/input/event1";
 
     gKeyboardFd = open(dev, O_RDONLY);
@@ -126,22 +128,33 @@ void read_kbd(void*)
 
     while( !gShouldStop )
     {
-        n = read(gKeyboardFd, &ev, sizeof ev);
-        if (sizeof ev == n)
+        FD_ZERO(&readfds);
+        FD_SET(gKeyboardFd, &readfds);
+        tv.tv_sec = 0;
+        tv.tv_usec = 1000;
+
+        // Check if there are any characters ready to be read
+        int num_readable = select(gKeyboardFd + 1, &readfds, NULL, NULL, &tv);
+
+        if( num_readable > 0 )
         {
-            if (ev.type == EV_KEY && ev.value == 0)
+            num_read = read(gKeyboardFd, &ev, sizeof(ev) );
+            if( sizeof(ev) == num_read )
             {
-                // key released
-                keyType = 0;
-                keyValue = (int)ev.code;
-                newKeyEvent = true;
-            }
-            else if (ev.type == EV_KEY && ev.value == 1)
-            {
-                // key pressed
-                keyType = 1;
-                keyValue = (int)ev.code;
-                newKeyEvent = true;
+                if(ev.type == EV_KEY && ev.value == 0)
+                {
+                    // key released
+                    keyType = 0;
+                    keyValue = (int)ev.code;
+                    newKeyEvent = true;
+                }
+                else if(ev.type == EV_KEY && ev.value == 1)
+                {
+                    // key pressed
+                    keyType = 1;
+                    keyValue = (int)ev.code;
+                    newKeyEvent = true;
+                }
             }
         }
     }
