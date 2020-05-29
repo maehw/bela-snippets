@@ -20,6 +20,9 @@ http://www.eecs.qmul.ac.uk/~andrewm
 The Bela software is distributed under the GNU Lesser General Public License
 (LGPL 3.0), available here: https://www.gnu.org/licenses/lgpl-3.0.txt
 */
+/**
+ * The code was referenced in https://forum.bela.io/d/1304-how-to-properly-stop-the-execution-of-an-auxiliary-task/.
+ */
 
 #include <Bela.h>
 #include <libraries/Scope/Scope.h>
@@ -49,94 +52,99 @@ void read_kbd(void*);
 
 bool setup(BelaContext *context, void *userData)
 {
-	// tell the scope how many channels and the sample rate
-	scope.setup(2, context->audioSampleRate);
+    // tell the scope how many channels and the sample rate
+    scope.setup(2, context->audioSampleRate);
 
-	gPhase = 0;
-	gInverseSampleRate = 1.0f/context->audioSampleRate;
-	
-	// start qwerty kbd capture thread
- 	if((gInputTask = Bela_createAuxiliaryTask(&read_kbd, 50, "bela-read-input")) == 0)
- 		return false;
-    
-	return true;
+    gPhase = 0;
+    gInverseSampleRate = 1.0f/context->audioSampleRate;
+
+    // start qwerty kbd capture thread
+    if((gInputTask = Bela_createAuxiliaryTask(&read_kbd, 50, "bela-read-input")) == 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 void render(BelaContext *context, void *userData)
 {
-	static float out2 = 0;
+    static float out2 = 0;
 
-	// iterate over the audio frames and create three oscillators, seperated in phase by PI/2
-	for (unsigned int n = 0; n < context->audioFrames; ++n)
-	{
-		float out = 0.8f * sinf(gPhase);
+    // iterate over the audio frames and create three oscillators, seperated in phase by PI/2
+    for (unsigned int n = 0; n < context->audioFrames; ++n)
+    {
+        float out = 0.8f * sinf(gPhase);
 
-		gPhase += 2.0f * (float)M_PI * gFrequency * gInverseSampleRate;
-		if(gPhase > M_PI)
-			gPhase -= 2.0f * (float)M_PI;
-			
-		// log the three oscillators to the scope
-		scope.log(out, out2);
-	}
-	
-	if(newKeyEvent)
-	{
-		if(keyType == 0)
-		{
-			out2 = 0.0f;
-		}
-		else if(keyType == 1)
-		{
-			out2 = 0.8f;
-		}
-		newKeyEvent = false;
-	}
-	
+        gPhase += 2.0f * (float)M_PI * gFrequency * gInverseSampleRate;
+        if(gPhase > M_PI)
+        {
+            gPhase -= 2.0f * (float)M_PI;
+        }
+
+        // log the oscillator and the keyboard event to the scope
+        scope.log(out, out2);
+    }
+
+    if(newKeyEvent)
+    {
+        if(keyType == 0)
+        {
+            out2 = 0.0f;
+        }
+        else if(keyType == 1)
+        {
+            out2 = 0.8f;
+        }
+        newKeyEvent = false;
+    }
+
     Bela_scheduleAuxiliaryTask(gInputTask);
 
 }
 
 void cleanup(BelaContext *context, void *userData)
 {
-	if(gKeyboardFd)
-	{
-		close(gKeyboardFd);
-	}
+    if(gKeyboardFd)
+    {
+        close(gKeyboardFd);
+    }
 }
 
 void read_kbd(void*)
 {
-	// Variables keyboard control
-	struct input_event ev;
-	ssize_t n;
-	const char *dev = "/dev/input/event1";
-	
-	// qwerty keyboard capture
-	gKeyboardFd = open(dev, O_RDONLY);
-	if (gKeyboardFd == -1) {
-		fprintf(stderr, "Cannot open %s:.\n", dev);
-		return;
-	}
-	
-	while( Bela_stopRequested() != 0 )
-	{
-		n = read(gKeyboardFd, &ev, sizeof ev);
-		if (sizeof ev == n)
-		{
-	        if (ev.type == EV_KEY && ev.value == 0)
-	        {
-				keyType = 0; // key released
-	         	keyValue = (int)ev.code;
-	         	newKeyEvent = true;
-	        }
-			else if (ev.type == EV_KEY && ev.value == 1)
-			{
-				keyType = 1; // key pressed
-				keyValue = (int)ev.code;
-				newKeyEvent = true;
-			}
-	    }
-	}
-	
-	return;
+    ssize_t n;
+    struct input_event ev;
+    const char *dev = "/dev/input/event1";
+
+    gKeyboardFd = open(dev, O_RDONLY);
+    if (gKeyboardFd == -1)
+    {
+        fprintf(stderr, "Cannot open file \"%s\".\n", dev);
+        return;
+    }
+
+    while( !gShouldStop )
+    {
+        n = read(gKeyboardFd, &ev, sizeof ev);
+        if (sizeof ev == n)
+        {
+            if (ev.type == EV_KEY && ev.value == 0)
+            {
+                // key released
+                keyType = 0;
+                keyValue = (int)ev.code;
+                newKeyEvent = true;
+            }
+            else if (ev.type == EV_KEY && ev.value == 1)
+            {
+                // key pressed
+                keyType = 1;
+                keyValue = (int)ev.code;
+                newKeyEvent = true;
+            }
+        }
+    }
+
+    return;
 }
