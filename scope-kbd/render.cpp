@@ -1,6 +1,7 @@
 /**
- * This example demonstrates the use of a keyboard plugged into Bela directly.
+ * This snippet demonstrates the use of a keyboard plugged into Bela directly.
  * Have a look at the Bela Oscilloscope and then type on your keyboard.
+ * Any key stroke will show as a positive level. 
  * This has been used to check if Bela works together MaKey MaKey.
  * The code was referenced in https://forum.bela.io/d/1304-how-to-properly-stop-the-execution-of-an-auxiliary-task/.
  */

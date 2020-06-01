@@ -1,8 +1,9 @@
 /**
  * This snippet is based on the "additive-synth" project of
  * "C++ Real-Time Audio Programming with Bela - Lecture 5: Classes and Objects".
- * It uses additive synthesiser based on an array of Wavetable oscillator objects.
+ * It uses an additive synthesiser based on an array of Wavetable oscillator objects.
  * MaKey MaKey (or a keyboard) is used as input.
+ * Six different keys are associated with one oscillator each.
  */
 
 #include <Bela.h>
